@@ -1,5 +1,8 @@
 import os
 import sys
+import subprocess
+import platform
+from time import sleep
 
 # Define the order of the common sections
 common_sections = [
@@ -15,8 +18,21 @@ directory = "tex"
 # List of valid resume types
 valid_resume_types = {"backend", "frontend", "fullstack", "javascript", "python", "java", "general"}
 
-# Function to build the resume
+def generate_pdf(output_dir, tex_file):
+    """Generate PDF from .tex file and clean up auxiliary files."""
+    if platform.system() == "Linux":
+        subprocess.run(["pdflatex", "-output-directory", output_dir, tex_file], check=True)
+    elif platform.system() == "Windows":
+        print("PDF generation is not supported on Windows in this script.")
+        return
+
+    # Clean up the directory by removing all files except .tex and .pdf
+    for filename in os.listdir(output_dir):
+        if not (filename.endswith(".tex") or filename.endswith(".pdf")):
+            os.remove(os.path.join(output_dir, filename))
+
 def build_resume(resume_type, company_name):
+    """Build the resume by concatenating LaTeX files."""
     # Define the specific sections for the given resume type
     specific_sections = [
         f"skills_{resume_type}.tex",
@@ -25,6 +41,17 @@ def build_resume(resume_type, company_name):
 
     # Create the output directory
     output_dir = os.path.join("..", company_name)
+    
+    # Clean the output directory if it exists
+    if os.path.exists(output_dir):
+        for filename in os.listdir(output_dir):
+            file_path = os.path.join(output_dir, filename)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
+            elif os.path.isdir(file_path):
+                os.rmdir(file_path)
+
+    # Create the output directory
     os.makedirs(output_dir, exist_ok=True)
 
     # Output file
@@ -49,30 +76,63 @@ def build_resume(resume_type, company_name):
     with open(output_file, 'w') as file:
         file.write(resume_content)
 
-    # Create an additional text file in the output directory
-    additional_file_path = os.path.join(output_dir, "additional_info.txt")
-    with open(additional_file_path, 'w') as file:
-        file.write(f"This directory contains the resume for {company_name}.\n")
-
     print(f"Resume for {resume_type} has been built and saved to {output_file}")
-    print(f"Additional information file has been created at {additional_file_path}")
 
-# Main function to handle command line arguments
+    # Generate the PDF file from the .tex file
+    generate_pdf(output_dir, output_file)
+
+def generate_from_existing(company_name):
+    """Generate PDF from an existing LaTeX file and clean up."""
+    output_dir = os.path.join("..", company_name)
+    tex_file = os.path.join(output_dir, f"resume_{company_name}.tex")
+
+    if not os.path.exists(tex_file):
+        print(f"Error: {tex_file} does not exist.")
+        sys.exit(1)
+
+    # Generate the PDF file from the .tex file
+    generate_pdf(output_dir, tex_file)
+
+def print_help():
+    """Print usage instructions."""
+    print("Usage:")
+    print("  python builder.py create <resume_type> <company_name>  - Create a new resume and generate a PDF")
+    print("  python builder.py generate <company_name>              - Generate a PDF from an existing LaTeX file")
+    print("  python builder.py help                                 - Show this help message")
+    print("\nValid resume types are:")
+    for valid_type in valid_resume_types:
+        print(f" - {valid_type}")
+
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python builder.py <resume_type> <company_name>")
+    if len(sys.argv) < 2:
+        print_help()
         sys.exit(1)
 
-    resume_type = sys.argv[1]
-    company_name = sys.argv[2]
-    if resume_type not in valid_resume_types:
-        print(f"Invalid resume type: {resume_type}")
-        print("Valid resume types are:")
-        for valid_type in valid_resume_types:
-            print(f" - {valid_type}")
-        sys.exit(1)
+    command = sys.argv[1].strip()
 
-    build_resume(resume_type, company_name)
+    if command == "generate":
+        if len(sys.argv) != 3:
+            print_help()
+            sys.exit(1)
+        company_name = sys.argv[2].strip()
+        generate_from_existing(company_name)
+    elif command == "create":
+        if len(sys.argv) != 4:
+            print_help()
+            sys.exit(1)
+        resume_type = sys.argv[2].strip()
+        company_name = sys.argv[3].strip()
+        if resume_type not in valid_resume_types:
+            print(f"Invalid resume type: {resume_type}")
+            print_help()
+            sys.exit(1)
+        build_resume(resume_type, company_name)
+    elif command == "help":
+        print_help()
+    else:
+        print("Invalid command.")
+        print_help()
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
