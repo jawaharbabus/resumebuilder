@@ -2,7 +2,6 @@ import os
 import sys
 import subprocess
 import platform
-from time import sleep
 
 # Define the order of the common sections
 common_sections = [
@@ -20,10 +19,10 @@ valid_resume_types = {"backend", "frontend", "fullstack", "javascript", "python"
 
 def generate_pdf(output_dir, tex_file):
     """Generate PDF from .tex file and clean up auxiliary files."""
-    if platform.system() == "Linux":
+    if platform.system() == "Linux" or platform.system() == "Windows":
         subprocess.run(["pdflatex", "-output-directory", output_dir, tex_file], check=True)
-    elif platform.system() == "Windows":
-        print("PDF generation is not supported on Windows in this script.")
+    else:
+        print("PDF generation is not supported on this platform.")
         return
 
     # Clean up the directory by removing all files except .tex and .pdf
