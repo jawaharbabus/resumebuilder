@@ -27,7 +27,7 @@ def generate_pdf(output_dir, tex_file):
 
     # Clean up the directory by removing all files except .tex and .pdf
     for filename in os.listdir(output_dir):
-        if not (filename.endswith(".tex") or filename.endswith(".pdf")):
+        if not (filename.endswith(".tex") or filename.endswith(".pdf") or filename.endswith(".txt")):
             os.remove(os.path.join(output_dir, filename))
 
 def build_resume(resume_type, company_name):
@@ -55,6 +55,7 @@ def build_resume(resume_type, company_name):
 
     # Output file
     output_file = os.path.join(output_dir, f"resume_{company_name}.tex")
+    placeholder_file = os.path.join(output_dir, f"cover_{company_name}.txt")
 
     # Start the LaTeX document
     resume_content = ""
@@ -74,6 +75,9 @@ def build_resume(resume_type, company_name):
     # Write the concatenated content to the output file
     with open(output_file, 'w') as file:
         file.write(resume_content)
+    # Write the placeholder content to the cover letter placeholder
+    with open(placeholder_file, "w") as file:
+        file.write("Role: <role>\nCompany: <company>\n\n[Insert cover letter body here]")
 
     print(f"Resume for {resume_type} has been built and saved to {output_file}")
 
@@ -91,6 +95,76 @@ def generate_from_existing(company_name):
 
     # Generate the PDF file from the .tex file
     generate_pdf(output_dir, tex_file)
+
+# Function to build a cover letter
+def build_cover_letter(company_name):
+    """Build a cover letter by interpolating role and company details."""
+    # Create the output directory
+    output_dir = os.path.join("..", company_name)
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Define the placeholder text file
+    placeholder_file = os.path.join(output_dir, f"cover_{company_name}.txt")
+
+    # Ensure the placeholder file exists
+    if not os.path.exists(placeholder_file):
+        with open(placeholder_file, "w") as file:
+            file.write("[Insert cover letter body here]")
+
+    # Read the placeholder content
+    with open(placeholder_file, "r") as file:
+        body_content = file.read().strip()
+        body_lines = body_content.split('\n')
+
+    # Extract role and company from the placeholder
+    try:
+        print(f"{body_lines[0]},{body_lines[1]}")
+        role = body_lines[0].replace("Role: ", "").strip()
+        company = body_lines[1].replace("Company: ", "").strip()
+        print(f"Building cover letter for {role} at {company}")
+        #body_content = "".join(body_lines[3:])
+    except IndexError:
+        print(f"Error: Placeholder file {placeholder_file} is not formatted correctly.")
+        sys.exit(1)
+
+    # Read the header file
+    header_file = os.path.join(directory, "cover_header.tex")
+    if not os.path.exists(header_file):
+        print(f"Error: {header_file} does not exist.")
+        sys.exit(1)
+
+    with open(header_file, "r") as file:
+        header_content = file.read()
+
+    # Replace placeholders in the header
+    header_content = header_content.replace("{company}", company).replace("{role}", role)
+
+    # Process body content: add spacing before paragraphs
+    body_with_spacing = "\n\n\\vspace{0.5cm}\n".join(body_content.split("\n\n")[1:])
+
+    # Footer content
+    footer_content = "\n\n\\makeletterclosing\n\\end{document}\n"
+
+    # Finalize cover letter content
+    cover_letter_content = header_content + "\n" + body_with_spacing + footer_content
+
+    # Output file
+    output_file = os.path.join(output_dir, f"coverletter_{company_name}.tex")
+
+    # Write the content to the .tex file
+    with open(output_file, "w") as file:
+        file.write(cover_letter_content)
+
+    print(f"Cover letter for {company} has been built and saved to {output_file}")
+
+    # Generate the PDF file from the .tex file
+    generate_pdf(output_dir, output_file)
+
+    # Remove the .tex file after PDF generation
+    os.remove(output_file)
+    # os.remove(placeholder_file)
+
+# Function to print help
 
 def print_help():
     """Print usage instructions."""
@@ -115,6 +189,14 @@ def main():
             sys.exit(1)
         company_name = sys.argv[2].strip()
         generate_from_existing(company_name)
+
+    elif command == "cover":
+        if len(sys.argv) != 3:
+            print_help()
+            sys.exit(1)
+        company_name = sys.argv[2].strip()
+        build_cover_letter(company_name)
+
     elif command == "create":
         if len(sys.argv) != 4:
             print_help()
