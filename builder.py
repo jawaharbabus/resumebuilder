@@ -15,7 +15,7 @@ common_sections = [
 directory = "tex"
 
 # List of valid resume types
-valid_resume_types = {"backend", "frontend", "fullstack", "javascript", "python", "java", "general"}
+valid_resume_types = {"backend", "frontend", "fullstack", "javascript", "python", "java", "general", "ai", "test"}
 
 def generate_pdf(output_dir, tex_file):
     """Generate PDF from .tex file and clean up auxiliary files."""
