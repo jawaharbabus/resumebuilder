@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import platform
+from ai import AIBuilder
 
 # Define the order of the common sections
 common_sections = [
@@ -99,33 +100,21 @@ def generate_from_existing(company_name):
 # Function to build a cover letter
 def build_cover_letter(company_name):
     """Build a cover letter by interpolating role and company details."""
+    ai_builder = AIBuilder()
+    ai_builder.initialize_llm()
+    # Read the job description from the placeholder file
+    job_description_file = f"../{company_name}/cover_{company_name}.txt"
+    if not os.path.exists(job_description_file):
+        print(f"Error: {job_description_file} does not exist.")
+        sys.exit(1)
+
+    with open(job_description_file, "r") as file:
+        job_description = file.read().strip()
+    ai_cover = ai_builder.build_cover(job_description, f"../{company_name}/resume_{company_name}.pdf")
+
     # Create the output directory
     output_dir = os.path.join("..", company_name)
     os.makedirs(output_dir, exist_ok=True)
-
-    # Define the placeholder text file
-    placeholder_file = os.path.join(output_dir, f"cover_{company_name}.txt")
-
-    # Ensure the placeholder file exists
-    if not os.path.exists(placeholder_file):
-        with open(placeholder_file, "w") as file:
-            file.write("[Insert cover letter body here]")
-
-    # Read the placeholder content
-    with open(placeholder_file, "r") as file:
-        body_content = file.read().strip()
-        body_lines = body_content.split('\n')
-
-    # Extract role and company from the placeholder
-    try:
-        print(f"{body_lines[0]},{body_lines[1]}")
-        role = body_lines[0].replace("Role: ", "").strip()
-        company = body_lines[1].replace("Company: ", "").strip()
-        print(f"Building cover letter for {role} at {company}")
-        #body_content = "".join(body_lines[3:])
-    except IndexError:
-        print(f"Error: Placeholder file {placeholder_file} is not formatted correctly.")
-        sys.exit(1)
 
     # Read the header file
     header_file = os.path.join(directory, "cover_header.tex")
@@ -137,10 +126,11 @@ def build_cover_letter(company_name):
         header_content = file.read()
 
     # Replace placeholders in the header
-    header_content = header_content.replace("{company}", company).replace("{role}", role)
+    header_content = header_content.replace("{company}", ai_cover["company"]).replace("{role}", ai_cover["role"])
 
     # Process body content: add spacing before paragraphs
-    body_with_spacing = "\n\n\\vspace{0.5cm}\n".join(body_content.split("\n\n")[1:])
+    # body_with_spacing = "\n\n\\vspace{0.5cm}\n".join(ai_cover["body"])
+    body_with_spacing = "\n\n\\vspace{0.5cm}".join([paragraph for paragraph in ai_cover["body"] if paragraph.strip()])
 
     # Footer content
     footer_content = "\n\n\\makeletterclosing\n\\end{document}\n"
@@ -155,14 +145,9 @@ def build_cover_letter(company_name):
     with open(output_file, "w") as file:
         file.write(cover_letter_content)
 
-    print(f"Cover letter for {company} has been built and saved to {output_file}")
-
-    # Generate the PDF file from the .tex file
+    print(f"Cover letter for {ai_cover["company"]} has been built and saved to {output_file}")
     generate_pdf(output_dir, output_file)
-
-    # Remove the .tex file after PDF generation
     os.remove(output_file)
-    # os.remove(placeholder_file)
 
 # Function to print help
 
