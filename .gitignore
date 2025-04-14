@@ -1,0 +1,14 @@
+# Ignore everything under the ./tex folder
+tex/
+
+# Ignore credentials and token files
+credentials.json
+token.json
+
+# Ignore virtual environment folder
+myenv/
+
+# Ignore Python cache files
+__pycache__/
+
+.env
